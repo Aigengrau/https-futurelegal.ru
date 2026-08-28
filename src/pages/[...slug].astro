@@ -1,0 +1,43 @@
+---
+import Base from '../layouts/Base.astro';
+import manifest from '../data/manifest.json';
+
+type PageData = {
+  route: string;
+  meta: { title: string; description: string; ogImage: string; robots: string };
+  sheets: string[];
+  records: { id: string; type: string; html: string }[];
+};
+
+const pageModules = import.meta.glob<PageData>('../data/pages/*.json', { eager: true, import: 'default' });
+
+export function getStaticPaths() {
+  return manifest.map((p) => ({
+    params: { slug: p.slug || undefined },
+    props: { file: p.file },
+  }));
+}
+
+const { file } = Astro.props as { file: string };
+const page = pageModules[`../data/pages/${file}`];
+if (!page) throw new Error(`Не найдены данные страницы: ${file}`);
+
+/**
+ * The record markup is raw HTML from the original, so Vite never sees its URLs.
+ * Prefix them here instead, which is also what makes a GitHub Pages project
+ * path (/repo/) work without touching the extracted content.
+ */
+const base = import.meta.env.BASE_URL.replace(/\/+$/, '');
+const withBase = (html: string) =>
+  base ? html.replaceAll('="/assets/', `="${base}/assets/`).replaceAll('href="/', `href="${base}/`) : html;
+---
+
+<Base
+  title={page.meta.title}
+  description={page.meta.description}
+  ogImage={page.meta.ogImage}
+  robots={page.meta.robots}
+  sheets={page.sheets}
+>
+  {page.records.map((rec) => <Fragment set:html={withBase(rec.html)} />)}
+</Base>

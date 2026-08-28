@@ -1,0 +1,274 @@
+---
+import '../styles/base.css';
+import { site, forms } from '../data/site';
+
+interface Props {
+  title: string;
+  description?: string;
+  ogImage?: string;
+  robots?: string;
+  /** Stylesheet file names in /public/styles, in the original's order. */
+  sheets: string[];
+}
+
+const { title, description = '', ogImage = '', robots = '', sheets } = Astro.props;
+
+const asset = (f: string) => `${import.meta.env.BASE_URL}/${f}`.replace(/\/+/g, '/');
+const canonical = new URL(Astro.url.pathname, Astro.site ?? site.url).href;
+const ogUrl = ogImage ? new URL(asset(ogImage.replace(/^\//, '')), Astro.site ?? site.url).href : '';
+---
+
+<!doctype html>
+<html lang={site.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    {robots && <meta name="robots" content={robots} />}
+    <link rel="canonical" href={canonical} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ru_RU" />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={title} />
+    {description && <meta property="og:description" content={description} />}
+    <meta property="og:url" content={canonical} />
+    {ogUrl && <meta property="og:image" content={ogUrl} />}
+    {ogUrl && <meta name="twitter:card" content="summary_large_image" />}
+
+    <link rel="icon" href={asset(`assets/img/${site.favicon}`)} />
+    <meta name="format-detection" content="telephone=no" />
+
+    {/* Each page loads exactly the stylesheets the original loaded: the
+        bundles redefine shared selectors differently per page, so merging
+        them would break the pages that lost the conflict. */}
+    {sheets.map((s) => <link rel="stylesheet" href={asset(`styles/${s}`)} />)}
+
+    <script is:inline>
+      document.documentElement.classList.add('js');
+    </script>
+  </head>
+
+  <body class="t-body">
+    <div id="allrecords" class="t-records">
+      <slot />
+    </div>
+
+    <script define:vars={{ formsInert: forms.inert, formMessage: forms.message }}>
+      // ---- lazy images -----------------------------------------------------
+      // Tilda shipped every image as data-original and swapped it in on scroll.
+      // Native loading="lazy" does the same job without a scroll listener.
+      const swap = (el) => {
+        const src = el.getAttribute('data-original');
+        if (!src) return;
+        if (el.tagName === 'IMG') {
+          el.setAttribute('src', src);
+          el.setAttribute('loading', 'lazy');
+          el.setAttribute('decoding', 'async');
+        } else {
+          el.style.backgroundImage = `url('${src}')`;
+        }
+        el.removeAttribute('data-original');
+      };
+      document.querySelectorAll('[data-original]').forEach(swap);
+
+      // Cover blocks carry their background on a data attribute too.
+      document.querySelectorAll('[data-content-cover-bg]').forEach((el) => {
+        const bg = el.getAttribute('data-content-cover-bg');
+        if (bg && !el.style.backgroundImage) el.style.backgroundImage = `url('${bg}')`;
+      });
+
+      // ---- scroll reveal ---------------------------------------------------
+      // Tilda's stylesheet already defines the start state (opacity 0) and the
+      // end state (.t-animate_started). Only the trigger and the starting
+      // transform were done in JS, so that is all we reproduce.
+      const animated = [...document.querySelectorAll('.t-animate[data-animate-style]')];
+
+      const startTransform = (el) => {
+        const d = parseFloat(el.dataset.animateDistance || '100') || 100;
+        switch (el.dataset.animateStyle) {
+          case 'fadeinleft': return `translateX(-${d}px)`;
+          case 'fadeinright': return `translateX(${d}px)`;
+          case 'fadeinup': return `translateY(${d}px)`;
+          case 'fadeindown': return `translateY(-${d}px)`;
+          case 'zoomin': return `scale(${parseFloat(el.dataset.animateScale || '0.9') || 0.9})`;
+          case 'zoomout': return `scale(${parseFloat(el.dataset.animateScale || '1.1') || 1.1})`;
+          default: return '';
+        }
+      };
+
+      // Counters keep their final value in the markup; count up to it.
+      const countUp = (el, seconds) => {
+        const raw = (el.textContent || '').trim();
+        const match = raw.match(/-?[\d\s.,]+/);
+        if (!match) return;
+        const numeric = match[0].replace(/\s/g, '').replace(',', '.');
+        const target = parseFloat(numeric);
+        if (Number.isNaN(target)) return;
+        const decimals = (numeric.split('.')[1] || '').length;
+        const prefix = raw.slice(0, match.index);
+        const suffix = raw.slice(match.index + match[0].length);
+        const began = performance.now();
+        const ms = Math.max(200, seconds * 1000);
+        const tick = (now) => {
+          const p = Math.min(1, (now - began) / ms);
+          const eased = 1 - Math.pow(1 - p, 3);
+          el.textContent = prefix + (target * eased).toFixed(decimals) + suffix;
+          if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      };
+
+      const reveal = (el) => {
+        if (el.dataset.flDone) return;
+        el.dataset.flDone = '1';
+        el.style.transform = '';
+        el.classList.add('t-animate_started');
+        if (el.dataset.animateStyle === 'animatednumber') {
+          countUp(el, parseFloat(el.dataset.animateDuration || '1') || 1);
+        }
+      };
+
+      if (animated.length) {
+        for (const el of animated) {
+          const t = startTransform(el);
+          if (t) el.style.transform = t;
+          const dur = el.dataset.animateDuration;
+          const delay = el.dataset.animateDelay;
+          if (dur) el.style.transitionDuration = `${dur}s`;
+          if (delay) el.style.transitionDelay = `${delay}s`;
+        }
+
+        const revealAll = () => animated.forEach(reveal);
+
+        if (!('IntersectionObserver' in window)) {
+          revealAll();
+        } else {
+          const io = new IntersectionObserver(
+            (entries) => {
+              for (const e of entries) {
+                if (!e.isIntersecting) continue;
+                reveal(e.target);
+                io.unobserve(e.target);
+              }
+            },
+            { rootMargin: '0px 0px -10% 0px', threshold: 0.01 },
+          );
+          // Anything already on screen is revealed straight away rather than
+          // waiting for the observer's first asynchronous callback.
+          const vh = window.innerHeight;
+          for (const el of animated) {
+            const r = el.getBoundingClientRect();
+            if (r.top < vh && r.bottom > 0) reveal(el);
+            else io.observe(el);
+          }
+          // Never leave content stranded at opacity 0.
+          window.addEventListener('load', () => window.setTimeout(revealAll, 2500));
+        }
+      }
+
+      // ---- step-by-step loops (the scrolling logo strips) -------------------
+      for (const el of document.querySelectorAll('[data-animate-sbs-opts]')) {
+        let steps;
+        try {
+          steps = JSON.parse((el.getAttribute('data-animate-sbs-opts') || '').replace(/'/g, '"'));
+        } catch {
+          continue;
+        }
+        if (!Array.isArray(steps) || steps.length < 2) continue;
+
+        const frames = steps.map((s) => ({
+          transform: `translate(${s.mx || 0}px, ${s.my || 0}px) scale(${s.sx ?? 1}, ${s.sy ?? 1}) rotate(${s.ro || 0}deg)`,
+          opacity: String(s.op ?? 1),
+        }));
+        const total = steps.reduce((n, s) => Math.max(n, s.ti || 0), 0) || 1000;
+
+        el.animate(frames, {
+          duration: total,
+          iterations: el.getAttribute('data-animate-sbs-loop') === 'loop' ? Infinity : 1,
+          easing: 'linear',
+        });
+      }
+
+      // ---- lazy video embeds -----------------------------------------------
+      // Tilda held these as data attributes and built the iframe on demand.
+      // Same idea here: the third-party player is only requested once the
+      // block is close to the viewport.
+      const videoEmbed = (el) => {
+        const type = el.getAttribute('data-videolazy-type');
+        const id = el.getAttribute('data-videolazy-id');
+        if (!id || el.querySelector('iframe')) return;
+
+        let src = '';
+        if (type === 'rutube') {
+          const hash = el.getAttribute('data-videolazy-hash');
+          src = `https://rutube.ru/play/embed/${id}/${hash ? `?p=${hash}` : ''}`;
+        } else if (type === 'youtube') {
+          src = `https://www.youtube.com/embed/${id}`;
+        } else if (type === 'vimeo') {
+          src = `https://player.vimeo.com/video/${id}`;
+        }
+        if (!src) return;
+
+        const frame = document.createElement('iframe');
+        frame.src = src;
+        frame.title = 'Видео';
+        frame.loading = 'lazy';
+        frame.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+        frame.allowFullscreen = true;
+        frame.setAttribute('frameborder', '0');
+        frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;';
+        if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+        el.appendChild(frame);
+        el.setAttribute('data-videolazy-load', 'true');
+      };
+
+      const videos = document.querySelectorAll('.t-video-lazyload[data-videolazy-id]');
+      if (videos.length) {
+        if (!('IntersectionObserver' in window)) {
+          videos.forEach(videoEmbed);
+        } else {
+          const vio = new IntersectionObserver(
+            (entries) => {
+              for (const e of entries) {
+                if (!e.isIntersecting) continue;
+                videoEmbed(e.target);
+                vio.unobserve(e.target);
+              }
+            },
+            { rootMargin: '400px' },
+          );
+          videos.forEach((v) => vio.observe(v));
+        }
+      }
+
+      // ---- menu ------------------------------------------------------------
+      document.querySelectorAll('[data-fl-burger]').forEach((burger) => {
+        const target = document.getElementById(burger.getAttribute('aria-controls') || '');
+        if (!target) return;
+        burger.addEventListener('click', () => {
+          const open = burger.getAttribute('aria-expanded') === 'true';
+          burger.setAttribute('aria-expanded', String(!open));
+          target.hidden = open;
+        });
+      });
+
+      // ---- inert forms -----------------------------------------------------
+      if (formsInert) {
+        document.querySelectorAll('form').forEach((form) => {
+          const notice = document.createElement('p');
+          notice.className = 'fl-form-notice';
+          notice.setAttribute('role', 'status');
+          notice.textContent = formMessage;
+          form.appendChild(notice);
+          form.setAttribute('novalidate', '');
+          form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            notice.setAttribute('data-visible', '');
+          });
+        });
+      }
+    </script>
+  </body>
+</html>

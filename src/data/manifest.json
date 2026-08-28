@@ -1,0 +1,106 @@
+[
+  {
+    "slug": "",
+    "route": "/",
+    "file": "index.json",
+    "title": "Юридическая компания Future Legal",
+    "records": 41,
+    "sheets": 9
+  },
+  {
+    "slug": "o-firme",
+    "route": "/o-firme",
+    "file": "o-firme.json",
+    "title": "О нас",
+    "records": 16,
+    "sheets": 6
+  },
+  {
+    "slug": "services",
+    "route": "/services",
+    "file": "services.json",
+    "title": "Услуги",
+    "records": 6,
+    "sheets": 6
+  },
+  {
+    "slug": "experience",
+    "route": "/experience",
+    "file": "experience.json",
+    "title": "Опыт",
+    "records": 7,
+    "sheets": 6
+  },
+  {
+    "slug": "awards",
+    "route": "/awards",
+    "file": "awards.json",
+    "title": "Награды",
+    "records": 9,
+    "sheets": 5
+  },
+  {
+    "slug": "reviews",
+    "route": "/reviews",
+    "file": "reviews.json",
+    "title": "Отзывы",
+    "records": 7,
+    "sheets": 6
+  },
+  {
+    "slug": "contacts",
+    "route": "/contacts",
+    "file": "contacts.json",
+    "title": "Контакты",
+    "records": 4,
+    "sheets": 4
+  },
+  {
+    "slug": "career",
+    "route": "/career",
+    "file": "career.json",
+    "title": "Карьера",
+    "records": 6,
+    "sheets": 4
+  },
+  {
+    "slug": "geo",
+    "route": "/geo",
+    "file": "geo.json",
+    "title": "География",
+    "records": 8,
+    "sheets": 6
+  },
+  {
+    "slug": "monitor",
+    "route": "/monitor",
+    "file": "monitor.json",
+    "title": "FUTURE LEGAL MONITOR",
+    "records": 5,
+    "sheets": 4
+  },
+  {
+    "slug": "world",
+    "route": "/world",
+    "file": "world.json",
+    "title": "FUTURE LEGAL WORLD",
+    "records": 5,
+    "sheets": 4
+  },
+  {
+    "slug": "proekt",
+    "route": "/proekt",
+    "file": "proekt.json",
+    "title": "Личные гарантии",
+    "records": 5,
+    "sheets": 4
+  },
+  {
+    "slug": "brendnow",
+    "route": "/brendnow",
+    "file": "brendnow.json",
+    "title": "BRAND NOW",
+    "records": 5,
+    "sheets": 4
+  }
+]

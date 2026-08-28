@@ -1,0 +1,73 @@
+/* =========================================================================
+   Runtime styles
+   --------------------------------------------------------------------------
+   The per-page stylesheets in /public/styles are the design spec, compiled by
+   Tilda for exactly the blocks each page uses — including the animation
+   definitions. This file only covers what Tilda's JavaScript used to do at
+   runtime, and the few places that JS is gone entirely.
+   ========================================================================= */
+
+/* Tilda kept the records container hidden until its script faded it in. */
+.t-records {
+  opacity: 1;
+}
+
+/* Its zero-block script toggled this once an artboard had been measured. */
+.t396__artboard .tn-elem {
+  visibility: visible;
+}
+
+/*
+ * Animated elements start at opacity 0 via Tilda's own CSS and are revealed by
+ * adding `.t-animate_started` — which our runtime does. If that script never
+ * runs the page would stay blank, so the `.js` class (set inline in <head>)
+ * gates the hiding: without JS, nothing is hidden in the first place.
+ */
+html:not(.js) .t-animate[data-animate-style] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-animate[data-animate-style] {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* =========================================================================
+   Lazy video
+   Tilda's stylesheet only paints the placeholder black; its script sized the
+   box before inserting the player. Measured against the original, that box is
+   exactly 16:9.
+   ========================================================================= */
+
+.t230__wrap-video .t-video-lazyload,
+.t-video-lazyload[data-videolazy-id] {
+  position: relative;
+  aspect-ratio: 16 / 9;
+}
+
+/* =========================================================================
+   Inert forms
+   The originals posted to Tilda's backend. Rather than silently swallow what
+   someone types, submitting says so.
+   ========================================================================= */
+
+.fl-form-notice {
+  display: none;
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 4px;
+  background: #fff5f5;
+  border: 1px solid #f0cccc;
+  color: #8a2b2b;
+  font-size: 14px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.fl-form-notice[data-visible] {
+  display: block;
+}
